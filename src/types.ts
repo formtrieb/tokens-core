@@ -25,6 +25,7 @@ export interface ResolutionStep {
   tokenPath: string;
   rawValue: unknown;
   sourceSet: string;
+  modifier?: ColorModifier;
 }
 
 export interface ResolutionChain {

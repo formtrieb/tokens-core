@@ -5,6 +5,24 @@ All notable changes to `@formtrieb/tokens-core` are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] — 2026-05-10
+
+### Added
+
+- **`ResolutionStep.modifier?: ColorModifier`.** When a token carries a
+  `$extensions.studio.tokens.modify` block, the corresponding
+  resolution step now exposes the modifier verbatim. Previously the
+  modifier was applied to `finalValue` invisibly — callers could see
+  the post-modification colour but not the operation that produced it.
+  This is the missing signal for tools that need to round-trip or
+  reason about derived tokens (e.g. brand-iteration loops where an LLM
+  edits source tokens and inspects what was applied where). Field is
+  optional and only present on steps whose token defines a `modify`.
+
+No breaking changes: the addition is strictly additive on an existing
+optional shape. Consumers that destructure only `tokenPath`,
+`rawValue`, `sourceSet` are unaffected.
+
 ## [1.0.0] — 2026-05-09
 
 ### Initial public release

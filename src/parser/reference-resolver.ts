@@ -56,10 +56,12 @@ export class ReferenceResolver {
 
     visited.add(dotPath);
 
+    const modifier = token.$extensions?.["studio.tokens"]?.modify;
     chain.steps.push({
       tokenPath: dotPath,
       rawValue: token.$value,
       sourceSet: token.sourceSet,
+      ...(modifier && { modifier }),
     });
 
     const resolved = this.resolveValue(token, chain, visited, depth);
