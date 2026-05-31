@@ -1,4 +1,37 @@
-import { parse, formatHex, displayable } from "culori";
+import {
+  parse,
+  formatHex,
+  formatHex8,
+  formatRgb,
+  displayable,
+  converter,
+} from "culori";
+
+const toLch = converter("lch");
+
+export type ColorFormat = "rgba" | "hex8" | "hex";
+
+/**
+ * Render a resolved colour value in a chosen format. Lets callers normalize a
+ * mix of `#hex` (plain + lighten/darken results) and `rgba(...)` (alpha results)
+ * into one consistent representation. Non-colour values (dimensions, numbers,
+ * unresolved references) pass through untouched.
+ */
+export function formatColor<T>(value: T, format: ColorFormat): T | string {
+  if (typeof value !== "string") return value;
+  const parsed = parse(value);
+  if (!parsed) return value;
+  switch (format) {
+    case "rgba":
+      return formatRgb(parsed);
+    case "hex8":
+      return formatHex8(parsed);
+    case "hex":
+      return formatHex(parsed);
+    default:
+      return value;
+  }
+}
 
 export function resolveLchToHex(value: string): string | null {
   const color = parse(value);
@@ -32,17 +65,18 @@ export function applyColorModifier(
     case "lighten": {
       const amount = parseFloat(modifier.value);
       if (isNaN(amount) || amount === 0) return formatHex(parsed);
-      const lchColor = parse(`lch(${parsed.l ?? 0} ${parsed.c ?? 0} ${parsed.h ?? 0})`);
-      if (!lchColor) return null;
-      (lchColor as any).l = Math.min(100, ((lchColor as any).l ?? 0) + amount * 100);
+      // Convert the base colour to LCH first — reading .l off the sRGB-parsed
+      // object yields undefined, which would make every result compute from
+      // lch(0 0 0) (black). Tokens-Studio amounts are 0–1 fractions of L's 0–100.
+      const lchColor = toLch(parsed);
+      lchColor.l = Math.min(100, lchColor.l + amount * 100);
       return formatHex(lchColor);
     }
     case "darken": {
       const amount = parseFloat(modifier.value);
       if (isNaN(amount) || amount === 0) return formatHex(parsed);
-      const lchColor = parse(`lch(${parsed.l ?? 0} ${parsed.c ?? 0} ${parsed.h ?? 0})`);
-      if (!lchColor) return null;
-      (lchColor as any).l = Math.max(0, ((lchColor as any).l ?? 0) - amount * 100);
+      const lchColor = toLch(parsed);
+      lchColor.l = Math.max(0, lchColor.l - amount * 100);
       return formatHex(lchColor);
     }
     default:

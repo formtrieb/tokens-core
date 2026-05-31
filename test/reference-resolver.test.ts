@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { ReferenceResolver } from "../src/parser/reference-resolver.js";
+import { applyColorModifier } from "../src/parser/color-resolver.js";
 import type { RawToken } from "../src/types.js";
 
 /**
@@ -86,5 +87,34 @@ describe("ReferenceResolver — color modifiers", () => {
 
     expect(chain.errors).toEqual([]);
     expect(chain.finalValue).toBe("#1a1a1a");
+  });
+});
+
+describe("applyColorModifier — lighten/darken in LCH space", () => {
+  // The base colour must be converted to LCH before its L channel is read.
+  // The old code read .l/.c/.h off an sRGB culori object (undefined → 0),
+  // so every lighten/darken computed from lch(0 0 0) (black) — garbage.
+  it("lightens a mid colour by raising LCH lightness, not from black", () => {
+    expect(applyColorModifier("#2072b6", { type: "lighten", value: "0.2", space: "lch" })).toBe(
+      "#64a6ee"
+    );
+  });
+
+  it("darkens a mid colour by lowering LCH lightness", () => {
+    expect(applyColorModifier("#2072b6", { type: "darken", value: "0.2", space: "lch" })).toBe(
+      "#004281"
+    );
+  });
+
+  it("darkens white toward grey (not toward black)", () => {
+    expect(applyColorModifier("#ffffff", { type: "darken", value: "0.2", space: "lch" })).toBe(
+      "#c6c6c6"
+    );
+  });
+
+  it("a zero-amount lighten is a no-op (returns the base colour)", () => {
+    expect(applyColorModifier("#2072b6", { type: "lighten", value: "0", space: "lch" })).toBe(
+      "#2072b6"
+    );
   });
 });

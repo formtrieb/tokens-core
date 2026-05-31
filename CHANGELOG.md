@@ -5,6 +5,28 @@ All notable changes to `@formtrieb/tokens-core` are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.2] — 2026-05-31
+
+### Added
+
+- **`formatColor(value, format)`** — renders a resolved colour as `"rgba"`
+  (`rgb()`/`rgba()`), `"hex8"` (`#rrggbbaa`), or `"hex"` (`#rrggbb`). Lets callers
+  normalize a mix of `#hex` (plain + lighten/darken) and `rgba(...)` (alpha)
+  results into one representation. Non-colour values pass through untouched.
+- **`findColorMatches(query, candidates, opts)`** — reverse-lookup from a colour
+  value to the token paths that produce it. Exact match is format/casing-insensitive
+  (both sides normalized to `#rrggbbaa`); `opts.nearest` adds the perceptually
+  closest non-exact candidate by CIEDE2000 ΔE. Non-colour candidates are skipped.
+
+### Fixed
+
+- **`lighten`/`darken` colour modifiers now compute from the base colour, not
+  black.** `applyColorModifier` read the `.l/.c/.h` LCH channels off an sRGB-parsed
+  culori object, where they are `undefined` (→ `0`), so every lighten/darken
+  rebuilt from `lch(0 0 0)`. The base is now converted to LCH first. Fixes 30
+  reference DS tokens (icon tints, hover states) that previously resolved to
+  near-black garbage.
+
 ## [1.1.1] — 2026-05-31
 
 ### Fixed
