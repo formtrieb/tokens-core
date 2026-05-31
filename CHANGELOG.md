@@ -5,6 +5,22 @@ All notable changes to `@formtrieb/tokens-core` are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1] — 2026-05-31
+
+### Fixed
+
+- **Reference-valued colour modifiers are now composed into `finalValue`.**
+  When a `studio.tokens.modify` block's `value` was itself a token reference
+  (e.g. an `alpha` modifier whose multiplier is
+  `{color.text.lightness.multiplier.secondary}`), the reference was passed
+  verbatim to `parseFloat`, yielding `NaN`, so the modifier was silently
+  dropped and `finalValue` fell back to the unmodified base colour. The
+  modifier `value` is now reference-resolved against the token map before the
+  modifier is applied. Literal-valued modifiers (the common case) are
+  unchanged. Alpha-driven colours (semantic text tiers, etc.) now resolve to
+  their true `rgba(…)` value instead of the opaque base. 3 new tests in
+  `test/reference-resolver.test.ts`.
+
 ## [1.1.0] — 2026-05-10
 
 ### Added

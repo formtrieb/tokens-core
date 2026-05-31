@@ -1,4 +1,4 @@
-import type { RawToken, ResolutionChain } from "../types.js";
+import type { ColorModifier, RawToken, ResolutionChain } from "../types.js";
 import { evaluateMath, containsMath } from "./math-evaluator.js";
 import {
   resolveLchToHex,
@@ -108,10 +108,13 @@ export class ReferenceResolver {
         typeof resolved === "string" &&
         isPlainColor(resolved)
       ) {
-        const modified = applyColorModifier(
-          resolved,
-          token.$extensions["studio.tokens"].modify
+        const modify = this.resolveModifierValue(
+          token.$extensions["studio.tokens"].modify,
+          chain,
+          visited,
+          depth
         );
+        const modified = applyColorModifier(resolved, modify);
         if (modified) resolved = modified;
       }
 
@@ -119,6 +122,31 @@ export class ReferenceResolver {
     }
 
     return value;
+  }
+
+  /**
+   * Modifier values may themselves be token references (e.g. an alpha modifier
+   * whose multiplier is `{color.text.lightness.multiplier.secondary}`). Resolve
+   * any reference in the value against the token map before the modifier is
+   * applied — otherwise parseFloat sees a `{...}` literal, yields NaN, and the
+   * modifier is silently dropped, leaving the base colour as the final value.
+   */
+  private resolveModifierValue(
+    modify: ColorModifier,
+    chain: ResolutionChain,
+    visited: Set<string>,
+    depth: number
+  ): ColorModifier {
+    if (typeof modify.value === "string" && modify.value.includes("{")) {
+      const resolved = this.resolveStringValue(
+        modify.value,
+        chain,
+        visited,
+        depth
+      );
+      return { ...modify, value: String(resolved) };
+    }
+    return modify;
   }
 
   private resolveStringValue(
