@@ -43,6 +43,14 @@ export {
   getDefaultAxes,
   getAxisGroups,
   getThemesForGroup,
+  describeAxes,
+  validateAxes,
+  UNGROUPED_AXIS,
+} from "./theme/theme-resolver.js";
+export type {
+  RawTheme,
+  AxisDescriptor,
+  AxisProblem,
 } from "./theme/theme-resolver.js";
 
 // Analyzer

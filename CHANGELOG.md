@@ -5,6 +5,32 @@ All notable changes to `@formtrieb/tokens-core` are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] — 2026-08-19
+
+### Added
+
+- **`describeAxes(axisMap)`** — the axes a token system actually offers, each with
+  its values and the value `getDefaultAxes()` falls back to. Consumers cannot know
+  the axes up front: they are whatever `$themes.json` groups its themes by, and
+  differ per design system.
+- **`validateAxes(axisMap, axes)`** — checks an axis selection against the loaded
+  themes and returns a structured problem per unknown axis or unknown value,
+  including a `suggestion` when only the casing differs. `getActiveSets()` skips
+  anything it cannot match, so without this check a typo resolves silently against
+  the wrong token sets.
+- **`UNGROUPED_AXIS`** — the axis name collecting themes that carry no `group`.
+- **`RawTheme`** is now exported; its `group` field is optional, matching what
+  Tokens Studio actually writes.
+
+### Fixed
+
+- **Themes without a `group` no longer produce an axis literally named
+  `"undefined"`.** `parseThemes` mapped a missing `group` straight through, so it
+  became an `undefined` key in the axis map and stringified to `"undefined"` in
+  `getDefaultAxes()`. Such themes now collect under `UNGROUPED_AXIS`
+  (`"Ungrouped"`) and are addressable like any other axis. A blank or
+  whitespace-only `group` is treated the same way.
+
 ## [1.1.2] — 2026-05-31
 
 ### Added
