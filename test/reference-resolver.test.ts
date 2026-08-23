@@ -91,18 +91,19 @@ describe("ReferenceResolver — color modifiers", () => {
 });
 
 describe("applyColorModifier — lighten/darken in LCH space", () => {
-  // The base colour must be converted to LCH before its L channel is read.
-  // The old code read .l/.c/.h off an sRGB culori object (undefined → 0),
-  // so every lighten/darken computed from lch(0 0 0) (black) — garbage.
-  it("lightens a mid colour by raising LCH lightness, not from black", () => {
+  // Expected values produced by @tokens-studio/sd-transforms, which generates
+  // the shipped CSS. test/sd-transforms-parity.test.ts checks them against the
+  // real implementation rather than against these literals.
+  it("lightens a mid colour by raising LCH lightness and lowering chroma", () => {
     expect(applyColorModifier("#2072b6", { type: "lighten", value: "0.2", space: "lch" })).toBe(
-      "#64a6ee"
+      "#5c8cc5"
     );
   });
 
-  it("darkens a mid colour by lowering LCH lightness", () => {
+  it("darkens a mid colour without collapsing the red channel", () => {
+    // The pre-fix value was #004281 — R clipped to 0.
     expect(applyColorModifier("#2072b6", { type: "darken", value: "0.2", space: "lch" })).toBe(
-      "#004281"
+      "#215a8f"
     );
   });
 
@@ -112,9 +113,17 @@ describe("applyColorModifier — lighten/darken in LCH space", () => {
     );
   });
 
-  it("a zero-amount lighten is a no-op (returns the base colour)", () => {
+  it("a zero-amount lighten round-trips an in-gamut colour", () => {
     expect(applyColorModifier("#2072b6", { type: "lighten", value: "0", space: "lch" })).toBe(
       "#2072b6"
+    );
+  });
+
+  it("a zero-amount lighten still gamut-maps an out-of-gamut base", () => {
+    // The old short-circuit returned the clipped #ff7652 here. 137 tokens in the
+    // real sets carry exactly this no-op modifier on out-of-gamut lch() ramps.
+    expect(applyColorModifier("lch(72% 84 40)", { type: "lighten", value: "0", space: "lch" })).toBe(
+      "#ff8c71"
     );
   });
 });

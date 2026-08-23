@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { formatColor } from "../src/parser/color-resolver.js";
+import { formatColor, resolveLchToHex } from "../src/parser/color-resolver.js";
 
 describe("formatColor", () => {
   it("formats an opaque hex as rgb()", () => {
@@ -29,5 +29,13 @@ describe("formatColor", () => {
 
   it("passes a non-string value through unchanged", () => {
     expect(formatColor(42, "rgba")).toBe(42);
+  });
+
+  it("gamut-maps an out-of-gamut lch() the same way resolveLchToHex does", () => {
+    // gamut.ts is the sole owner of the gamut decision — formatColor must
+    // route through it rather than clipping. Both must land on the mapped
+    // value (#ff8c71), not the per-channel clip (#ff7652).
+    expect(formatColor("lch(72% 84 40)", "hex")).toBe(resolveLchToHex("lch(72% 84 40)"));
+    expect(formatColor("lch(72% 84 40)", "hex")).toBe("#ff8c71");
   });
 });

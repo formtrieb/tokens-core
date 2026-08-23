@@ -5,6 +5,32 @@ All notable changes to `@formtrieb/tokens-core` are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] — 2026-08-23
+
+### Fixed
+
+- `applyColorModifier` now matches `@tokens-studio/sd-transforms`, the canonical
+  implementation of Tokens Studio's `modify` extension. Three divergences are
+  corrected: lightness moved by a fraction of the remaining distance rather than
+  by an absolute step, chroma scaled down with the amount, and out-of-gamut
+  results gamut-mapped (CSS Color 4 §13) instead of clipped per channel.
+- Every `lch()` value resolved through `resolveLchToHex` and
+  `resolveLchToHexWithGamut` is now gamut-mapped rather than clipped. This
+  affects any token whose value lands outside sRGB, with or without a modifier —
+  for a ramp authored with high chroma, that is most steps.
+- `lighten`/`darken` applied on top of an already-transparent base no longer
+  discards the alpha channel. `applyColorModifier` returns `rgba(r, g, b, a)`
+  for such colours instead of an opaque `#rrggbb`; opaque bases are unchanged.
+
+**Colour values change.** `resolve_token` and `resolve_batch` will report
+different colours than 1.2.0 did for affected tokens. The new values are the
+ones the generated CSS ships. No API signatures changed.
+
+Two gamut-mapping implementations are involved — culori here, colorjs.io in
+the generator — and they can land on adjacent 8-bit values. Measured across
+the foundation palette: 134 of 138 colour variables match the shipped CSS
+exactly; 4 differ by 1/255, all of them out-of-gamut colours.
+
 ## [1.2.0] — 2026-08-19
 
 ### Added

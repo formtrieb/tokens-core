@@ -8,4 +8,10 @@ declare module "culori" {
   export function displayable(color: any, mode?: string): boolean;
   export function converter(mode: string): (color: any) => any;
   export function differenceCiede2000(): (a: any, b: any) => number;
+  export function toGamut(
+    targetMode?: string,
+    mode?: string,
+    delta?: unknown,
+    jnd?: number
+  ): (color: any) => any;
 }

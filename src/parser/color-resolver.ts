@@ -6,6 +6,8 @@ import {
   displayable,
   converter,
 } from "culori";
+import { mapToSrgbGamut } from "./gamut.js";
+import { lightenLch, darkenLch } from "./color-modifiers.js";
 
 const toLch = converter("lch");
 
@@ -21,29 +23,52 @@ export function formatColor<T>(value: T, format: ColorFormat): T | string {
   if (typeof value !== "string") return value;
   const parsed = parse(value);
   if (!parsed) return value;
+  // Route through the sole gamut-mapping decision (see gamut.ts) before
+  // formatting, same as every other exported colour path. For an
+  // already-resolved in-gamut value — what @formtrieb/tokens-mcp passes in —
+  // this is an identity operation.
+  const mapped = mapToSrgbGamut(parsed);
   switch (format) {
     case "rgba":
-      return formatRgb(parsed);
+      return formatRgb(mapped);
     case "hex8":
-      return formatHex8(parsed);
+      return formatHex8(mapped);
     case "hex":
-      return formatHex(parsed);
+      return formatHex(mapped);
     default:
       return value;
   }
 }
 
+/**
+ * Render a gamut-mapped colour, keeping the alpha channel when there is one.
+ * `formatHex` silently drops alpha, which loses it for any modifier applied on
+ * top of an already-transparent base. The `rgba(...)` shape matches what the
+ * `alpha` branch already returns.
+ */
+function formatResolved(color: any): string {
+  const alpha = color.alpha ?? 1;
+  if (alpha >= 1) return formatHex(color);
+  const r = Math.round((color.r ?? 0) * 255);
+  const g = Math.round((color.g ?? 0) * 255);
+  const b = Math.round((color.b ?? 0) * 255);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
 export function resolveLchToHex(value: string): string | null {
   const color = parse(value);
   if (!color) return null;
-  return formatHex(color);
+  return formatHex(mapToSrgbGamut(color));
 }
 
 export function resolveLchToHexWithGamut(value: string): { hex: string; clipped: boolean } | null {
   const color = parse(value);
   if (!color) return null;
+  // `clipped` keeps its name and meaning — "this colour did not fit sRGB and was
+  // adjusted". The adjustment is now a chroma-reducing gamut map rather than a
+  // per-channel clip, which is what the shipped CSS does.
   const clipped = !displayable(color);
-  return { hex: formatHex(color), clipped };
+  return { hex: formatHex(mapToSrgbGamut(color)), clipped };
 }
 
 export function applyColorModifier(
@@ -55,32 +80,32 @@ export function applyColorModifier(
 
   switch (modifier.type) {
     case "alpha": {
-      const alpha = parseFloat(modifier.value);
-      if (isNaN(alpha)) return null;
-      const r = Math.round((parsed.r ?? 0) * 255);
-      const g = Math.round((parsed.g ?? 0) * 255);
-      const b = Math.round((parsed.b ?? 0) * 255);
+      const rawAlpha = parseFloat(modifier.value);
+      if (isNaN(rawAlpha)) return null;
+      // Match sd-transforms' `transparentize`, which clamps to [0, 1]
+      // (`Math.max(0, Math.min(1, Number(amount)))`) rather than passing the
+      // parsed amount through raw.
+      const alpha = Math.max(0, Math.min(1, rawAlpha));
+      // Gamut-map before reading channels: an out-of-gamut base would otherwise
+      // yield r/g/b outside [0,1] and round past 255.
+      const inGamut = mapToSrgbGamut(parsed);
+      const r = Math.round((inGamut.r ?? 0) * 255);
+      const g = Math.round((inGamut.g ?? 0) * 255);
+      const b = Math.round((inGamut.b ?? 0) * 255);
       return `rgba(${r}, ${g}, ${b}, ${alpha})`;
     }
     case "lighten": {
       const amount = parseFloat(modifier.value);
-      if (isNaN(amount) || amount === 0) return formatHex(parsed);
-      // Convert the base colour to LCH first — reading .l off the sRGB-parsed
-      // object yields undefined, which would make every result compute from
-      // lch(0 0 0) (black). Tokens-Studio amounts are 0–1 fractions of L's 0–100.
-      const lchColor = toLch(parsed);
-      lchColor.l = Math.min(100, lchColor.l + amount * 100);
-      return formatHex(lchColor);
+      if (isNaN(amount)) return formatResolved(mapToSrgbGamut(parsed));
+      return formatResolved(mapToSrgbGamut(lightenLch(toLch(parsed), amount)));
     }
     case "darken": {
       const amount = parseFloat(modifier.value);
-      if (isNaN(amount) || amount === 0) return formatHex(parsed);
-      const lchColor = toLch(parsed);
-      lchColor.l = Math.max(0, lchColor.l - amount * 100);
-      return formatHex(lchColor);
+      if (isNaN(amount)) return formatResolved(mapToSrgbGamut(parsed));
+      return formatResolved(mapToSrgbGamut(darkenLch(toLch(parsed), amount)));
     }
     default:
-      return formatHex(parsed);
+      return formatResolved(mapToSrgbGamut(parsed));
   }
 }
 
