@@ -1,3 +1,5 @@
+> **Archived.** Development of `@formtrieb/tokens-core` continues in the monorepo [formtrieb/tokens](https://github.com/formtrieb/tokens) under `packages/core`. The npm package name is unchanged; this repository stays as a read-only snapshot.
+
 # @formtrieb/tokens-core
 
 **Core library for Tokens-Studio-shaped design token systems — loaders,
